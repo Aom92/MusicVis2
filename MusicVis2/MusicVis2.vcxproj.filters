@@ -13,5 +13,74 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Resource Files\Shaders">
+      <UniqueIdentifier>{c92b7d29-9a37-4633-8d81-b28462572bb7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\OpenGL">
+      <UniqueIdentifier>{e5ce0255-7565-4851-8142-9595a7b1373c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MusicVis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\anim.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\anim.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\anim2.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\anim2.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lamp.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lamp.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lamp2.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lamp2.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lighting.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\lighting.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\modelLoading.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\modelLoading.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\Shader.shader">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
