@@ -50,10 +50,10 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void fft(CArray& x);
 
 //Window dimensions
-const GLuint WIDTH = 800, HEIGHT = 600;
+const GLuint WIDTH = 1280, HEIGHT = 720;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
-Camera camera(glm::vec3(0.0f, 0.0f, 40.0));
+Camera camera(glm::vec3(0.0f, 5.0f, 40.0));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
@@ -259,6 +259,12 @@ void Draw(wav_header&  AudioFile) {
 	int frames = 0;
 	double elapsed = 0;
     int samplecount = 0;
+
+    //bitrate correlated.
+    int deltaWav = (AudioFile.SampleRate * AudioFile.BitsPerSample * AudioFile.NumChannels)/1000;
+
+
+    
         
 		while (!glfwWindowShouldClose(window))
 		{
@@ -267,49 +273,69 @@ void Draw(wav_header&  AudioFile) {
 			elapsed = (clock() / (double)CLOCKS_PER_SEC) - initialTime;
 
             float deltaT = currentTime - elapsed;
-
+            
+            
+            
 
             //FFT Calculation each frame :S
-            float positions[] = { 
-                          AudioFile.audiodata[0 + samplecount],
+            float positionsL[] = { 
+                          //AudioFile.audiodata[0 + samplecount],
                           AudioFile.audiodata[1 + samplecount],
-                          AudioFile.audiodata[2 + samplecount],
+                          //AudioFile.audiodata[2 + samplecount],
                           AudioFile.audiodata[3 + samplecount],
-                          AudioFile.audiodata[4 + samplecount],
+                          //AudioFile.audiodata[4 + samplecount],
                           AudioFile.audiodata[5 + samplecount],
-                          AudioFile.audiodata[6 + samplecount],
+                          //AudioFile.audiodata[6 + samplecount],
                           AudioFile.audiodata[7 + samplecount],
-                          AudioFile.audiodata[8 + samplecount],
+                          //AudioFile.audiodata[8 + samplecount],
                           AudioFile.audiodata[9 + samplecount],
 
             };
 
+            float positionsR[] = {
+                AudioFile.audiodata[0 + samplecount],
+                
+                AudioFile.audiodata[2 + samplecount],
+                
+                AudioFile.audiodata[4 + samplecount],
+               
+                AudioFile.audiodata[6 + samplecount],
+               
+                AudioFile.audiodata[8 + samplecount],
+                
 
-            Complex* samples = (Complex*)malloc(sizeof(Complex*) * 10 * 4);
+            };
 
-            for (size_t i = 0; i < 10; i++)
+
+            Complex* samplesL = (Complex*)malloc(sizeof(Complex*) * 10 * 4);
+            Complex* samplesR = (Complex*)malloc(sizeof(Complex*) * 10 * 4);
+
+            for (size_t i = 0; i < 5; i++)
             {
-                Complex temp( positions[i], 1);
+                Complex temp( positionsL[i], 1);
+                Complex temp2(positionsR[i], 1);
                 //std::cout << i << std::endl;
-                samples[i] = temp;
+                samplesL[i] = temp;
+                samplesR[i] = temp2;
 
             }
 
-            CArray sample_data(samples, 10);
+            CArray sample_data(samplesL, 5);
+            CArray sample_dataR(samplesR, 5);
             fft(sample_data);
+            fft(sample_dataR);
 
-
-			float framedata[]{
-               
-                sample_data[1].real(), 
-                sample_data[2].real(), 
-                sample_data[3].real(),
-                /*sample_data[4].real(),
-                sample_data[5].real(),
-                sample_data[6].real(),
-                sample_data[7].real(),
-                sample_data[8].real(),
-                sample_data[9].real()*/
+            float framedata[]{
+                //LEFT:
+                sample_data[0].real(),
+                sample_data[1].real(),
+                sample_data[2].real(),
+                //RIGHT:
+                sample_dataR[0].real(),
+                sample_dataR[1].real(),
+                sample_dataR[2].real(),
+          
+             
 			};
 
             
@@ -354,13 +380,22 @@ void Draw(wav_header&  AudioFile) {
             
             //Set Uniforms.
 
+            //LEFT CHANNEL
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glUniform1f(glGetUniformLocation(Anim2.Program, "time"), tiempo);
+            glUniform3f(glGetUniformLocation(Anim2.Program, "sample"), framedata[3], framedata[4], framedata[5]);
+            model = glm::mat4(1);
+            model = glm::translate(model, glm::vec3(-10.0f, 10.0f, 0.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            Piso.Draw(Anim2);
+
+            //RIGHT CHANNEL
+            glUniform1f(glGetUniformLocation(Anim2.Program, "time"), tiempo);
             glUniform3f(glGetUniformLocation(Anim2.Program, "sample"), framedata[0], framedata[1], framedata[2]);
             model = glm::mat4(1);
-            model = glm::translate(model, glm::vec3(0.0f, 0.09f, 0.0f));
+            model = glm::translate(model, glm::vec3(10.0f, 5.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             Piso.Draw(Anim2);
             glBindVertexArray(0);
@@ -375,18 +410,21 @@ void Draw(wav_header&  AudioFile) {
             
            
             frames++;
-            samplecount = samplecount + 1480;
-            //samplecount++;
+            //samplecount = samplecount + 735;
+            // 
+            // 
+            // Number of samples per frame = SampleRate / FrameRate.
+            samplecount = samplecount + deltaWav + 69;
+            
 
-            if (samplecount >= 15969528)
+            if (samplecount >= AudioFile.SampleCount)
                 break;
 
             
 #if 0
 			
-			std::cout << "Frame Count: " << frames << "  Elapsed " << elapsed  << std::endl;
-            std::cout << "f0: " << framedata[0] << "  f1 " << framedata[1]
-                << "  f0 " << framedata[2] << std::endl;
+			std::cout << "Sample : " << framedata[0]  << std::endl;
+            
 #endif    
 		}
 
@@ -395,55 +433,80 @@ void Draw(wav_header&  AudioFile) {
         
 }
 
+void DrawCall(wav_header data) {
+
+    Draw(data);
+}
 
 int main()
 {
     
-    std::cout << "Listen World!\n";
+    std::cout << "Choose a Track \n";
+    std::cout << "1.  kininaru ano ko \n";
+    std::cout << "2.  UGO \n";
+    std::cout << "3.  Sine wave \n";
+    std::cout << "4.  Somaruyo\n";
+    std::cout << "5.  Stereo Test: LEFT\n";
+    std::cout << "6.  Stereo Test: RIGHT\n";
 
+    int input;
+    wav_header audiodata;
+    LPCWSTR Pathname;
+    std::cin >> input;
+
+    switch (input)
+    {
+    case 1:
+        Pathname = L"Tracks/kini.wav";
+        ProcessSound("Tracks/kini.wav", audiodata);
+        break;
+    case 2:
+        Pathname = L"Tracks/UGO.wav";
+        ProcessSound("Tracks/UGO.wav", audiodata);
+        break;
+    case 3:
+        Pathname = L"Tracks/seno.wav";
+        ProcessSound("Tracks/seno.wav", audiodata);
+        break;
+    case 4:
+        Pathname = L"Tracks/somaruyo.wav";
+        ProcessSound("Tracks/somaruyo.wav", audiodata);
+        break;
+    case 5:
+        Pathname = L"Tracks/left.wav";
+        ProcessSound("Tracks/left.wav", audiodata);
+        break;
+    case 6:
+        Pathname = L"Tracks/right.wav";
+        ProcessSound("Tracks/right.wav", audiodata);
+        break;
+    default:
+        std::cout << "Choose a Valid Track Number \n";
+        return -1;
+        break;
+    }
+    
 
     
     
 
-    wav_header audiodata; 
-    ProcessSound("Tracks/kini.wav", audiodata);
-
     
-   // fftw_complex* sampless = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * audiodata.SampleCount*4);
-   // FFT(audiodata, sampless);
-
-    //Complex* samples = (Complex*) malloc(sizeof(Complex*) * audiodata.SampleCount*4);
-    //
-    //
-
-    //for (size_t i = 0; i < audiodata.SampleCount; i++)
-    //{
-    //    Complex temp(1, 0);
-    //    //std::cout << i << std::endl;
-    //    samples[i] = temp;
-    //    
-    //}
-
-    //CArray sample_data(samples, audiodata.SampleCount);
-    //std::cout << sample_data[0] << std::endl;
-
-    //fft(sample_data);
-
-    //std::cout << sample_data[0] << std::endl;
+    /*ProcessSound("Tracks/riff.wav", audiodata);
+    LPCWSTR Pathname = L"Tracks/riff.wav";*/
     
     
-    
-
-    LPCWSTR Pathname = L"Tracks/kini.wav";
+    std::thread Dibujo(DrawCall, audiodata);
     std::thread Playback(PlayMusic, Pathname);
-
+    //Draw(audiodata);
     
     
-    Draw(audiodata);
+    
     
     Playback.hardware_concurrency();
+    Dibujo.hardware_concurrency();
     
     Playback.join();
+    Dibujo.join();
     
 
 
