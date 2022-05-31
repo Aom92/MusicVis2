@@ -8,7 +8,7 @@ void main()
 {
  
   vec4 texColor= texture(texture1,TexCoords);
-  texColor.r = 0.9*sin(2.5*time);
+  texColor.r = 0.9*sin(0.05*time);
   //texColor.g = 0.10*sin(1.5 * time);
   //texColor.g = 0.10;
     if(texColor.a < 0.1)
