@@ -261,7 +261,7 @@ void Draw(wav_header&  AudioFile) {
     int samplecount = 0;
 
     //bitrate correlated.
-    int deltaWav = (AudioFile.SampleRate * AudioFile.BitsPerSample * AudioFile.NumChannels)/1000;
+    int deltaWav = 10+(AudioFile.SampleRate * AudioFile.BitsPerSample * AudioFile.NumChannels)/1000;
 
 
     
@@ -448,6 +448,7 @@ int main()
     std::cout << "4.  Somaruyo\n";
     std::cout << "5.  Stereo Test: LEFT\n";
     std::cout << "6.  Stereo Test: RIGHT\n";
+    std::cout << "7.  Custom Track, MUST BE a WAV file, named 'custom' in the 'Tracks' folder\n";
 
     int input;
     wav_header audiodata;
@@ -479,6 +480,10 @@ int main()
     case 6:
         Pathname = L"Tracks/right.wav";
         ProcessSound("Tracks/right.wav", audiodata);
+        break;
+    case 7:
+        Pathname = L"Tracks/custom.wav";
+        ProcessSound("Tracks/custom.wav", audiodata);
         break;
     default:
         std::cout << "Choose a Valid Track Number \n";
