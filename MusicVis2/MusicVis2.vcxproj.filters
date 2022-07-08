@@ -65,6 +65,12 @@
     <None Include="Shaders\Shader.shader">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="Shaders\GraficaLin.vs">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="Shaders\GraficaLin.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">

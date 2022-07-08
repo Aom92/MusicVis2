@@ -9,6 +9,7 @@
 #include <string>
 #include <sstream>
 #include <thread>
+#include <future>
 #include <fftw3.h>
 #include <ctime>
 
@@ -184,7 +185,7 @@ void FFT(wav_header& AudioFile, fftw_complex* out) {
     fftw_destroy_plan(p);
 }   
 
-void Draw(wav_header&  AudioFile) {
+void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
     GLFWwindow* window;
 
     /* Inicializamos la biblioteca */
@@ -223,6 +224,7 @@ void Draw(wav_header&  AudioFile) {
 
     //Getting Shaders.
     Shader Anim2("Shaders/anim.vs", "Shaders/anim.frag");
+    Shader GraficaLin("Shaders/GraficaLin.vs", "Shaders/GraficaLin.frag");
     Model Piso((char*)"Models/Sea/Sea.obj");
 	
 
@@ -261,11 +263,21 @@ void Draw(wav_header&  AudioFile) {
     int samplecount = 0;
 
     //bitrate correlated.
-    int deltaWav = 10+(AudioFile.SampleRate * AudioFile.BitsPerSample * AudioFile.NumChannels)/1000;
+    int deltaWav = 60+(AudioFile.SampleRate * AudioFile.BitsPerSample * AudioFile.NumChannels)/1000;
 
 
+    struct point {
+        GLfloat x;
+        GLfloat y;
+    };
+
+    point graph[2000];
+
+    //CALL AUDIO THREAD TO AVOID DELAY DUE TO GRAPHICS INITIALIZATION
+    std::jthread Playback(PlayMusic, Pathname);
+    Playback.hardware_concurrency();
     
-        
+
 		while (!glfwWindowShouldClose(window))
 		{
 
@@ -274,7 +286,7 @@ void Draw(wav_header&  AudioFile) {
 
             float deltaT = currentTime - elapsed;
             
-            
+            int count = 10;
             
 
             //FFT Calculation each frame :S
@@ -307,10 +319,10 @@ void Draw(wav_header&  AudioFile) {
             };
 
 
-            Complex* samplesL = (Complex*)malloc(sizeof(Complex*) * 10 * 4);
-            Complex* samplesR = (Complex*)malloc(sizeof(Complex*) * 10 * 4);
+            Complex* samplesL = (Complex*)malloc(sizeof(Complex*) * count * 4);
+            Complex* samplesR = (Complex*)malloc(sizeof(Complex*) * count * 4);
 
-            for (size_t i = 0; i < 5; i++)
+            for (size_t i = 0; i < count; i++)
             {
                 Complex temp( positionsL[i], 1);
                 Complex temp2(positionsR[i], 1);
@@ -320,8 +332,8 @@ void Draw(wav_header&  AudioFile) {
 
             }
 
-            CArray sample_data(samplesL, 5);
-            CArray sample_dataR(samplesR, 5);
+            CArray sample_data(samplesL, count);
+            CArray sample_dataR(samplesR, count);
             fft(sample_data);
             fft(sample_dataR);
 
@@ -337,6 +349,15 @@ void Draw(wav_header&  AudioFile) {
           
              
 			};
+
+            for (int i = 0; i < 2000; i++) {
+                if (1 + samplecount >= AudioFile.SampleCount)
+                    break;
+                float x = (i - 1000.0) / 100.0;
+                graph[i].x = x;
+                graph[i].y = AudioFile.audiodata[i + samplecount]; //sin(x * 10.0) / (1.0 + x * x);
+               // graph[i].y = sample_data[i].real();
+            }
 
             
             // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
@@ -389,7 +410,7 @@ void Draw(wav_header&  AudioFile) {
             model = glm::mat4(1);
             model = glm::translate(model, glm::vec3(-10.0f, 10.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            Piso.Draw(Anim2);
+           // Piso.Draw(Anim2);
 
             //RIGHT CHANNEL
             glUniform1f(glGetUniformLocation(Anim2.Program, "time"), tiempo);
@@ -397,10 +418,38 @@ void Draw(wav_header&  AudioFile) {
             model = glm::mat4(1);
             model = glm::translate(model, glm::vec3(10.0f, 5.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            Piso.Draw(Anim2);
+            //Piso.Draw(Anim2);
             glBindVertexArray(0);
 
+            //BarGraph
+            model = glm::mat4(1);
 
+            GraficaLin.Use();
+            GLuint vbo;
+
+            glGenBuffers(1, &vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, sizeof graph, graph, GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(
+                0,   // attribute
+                2,                   // number of elements per vertex, here (x,y)
+                GL_FLOAT,            // the type of each element
+                GL_FALSE,            // take our values as-is
+                0,                   // no space between values
+                0                    // use the vertex buffer object
+            );
+
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "offset_x"), 0.0);
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "offset_y"), 0.0);
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_x"),  1.0);
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_y"),  0.8);
+            glDrawArrays(GL_LINE_STRIP, 0, 2000);
+
+            glDisableVertexAttribArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
 			
 
 			/* Swap front and back buffers */
@@ -414,7 +463,7 @@ void Draw(wav_header&  AudioFile) {
             // 
             // 
             // Number of samples per frame = SampleRate / FrameRate.
-            samplecount = samplecount + deltaWav + 69;
+            samplecount = samplecount + deltaWav;
             
 
             if (samplecount >= AudioFile.SampleCount)
@@ -426,92 +475,101 @@ void Draw(wav_header&  AudioFile) {
 			std::cout << "Sample : " << framedata[0]  << std::endl;
             
 #endif    
+            std::free(samplesL);
+            std::free(samplesR);
 		}
 
         glfwTerminate();
+        Playback.request_stop();
+        
 
         
 }
 
-void DrawCall(wav_header data) {
+void DrawCall(wav_header data, LPCWSTR Pathname) {
 
-    Draw(data);
+    Draw(data, Pathname);
 }
 
 int main()
 {
     
-    std::cout << "Choose a Track \n";
-    std::cout << "1.  kininaru ano ko \n";
-    std::cout << "2.  UGO \n";
-    std::cout << "3.  Sine wave \n";
-    std::cout << "4.  Somaruyo\n";
-    std::cout << "5.  Stereo Test: LEFT\n";
-    std::cout << "6.  Stereo Test: RIGHT\n";
-    std::cout << "7.  Custom Track, MUST BE a WAV file, named 'custom' in the 'Tracks' folder\n";
+    while (true) {
 
-    int input;
-    wav_header audiodata;
-    LPCWSTR Pathname;
-    std::cin >> input;
+        std::cout << "Choose a Track \n";
+        std::cout << "1.  kininaru ano ko \n";
+        std::cout << "2.  UGO \n";
+        std::cout << "3.  Sine wave \n";
+        std::cout << "4.  Somaruyo\n";
+        std::cout << "5.  Stereo Test: LEFT\n";
+        std::cout << "6.  Stereo Test: RIGHT\n";
+        std::cout << "7.  Custom Track, MUST BE a WAV file, named 'custom' in the 'Tracks' folder\n";
 
-    switch (input)
-    {
-    case 1:
-        Pathname = L"Tracks/kini.wav";
-        ProcessSound("Tracks/kini.wav", audiodata);
-        break;
-    case 2:
-        Pathname = L"Tracks/UGO.wav";
-        ProcessSound("Tracks/UGO.wav", audiodata);
-        break;
-    case 3:
-        Pathname = L"Tracks/seno.wav";
-        ProcessSound("Tracks/seno.wav", audiodata);
-        break;
-    case 4:
-        Pathname = L"Tracks/somaruyo.wav";
-        ProcessSound("Tracks/somaruyo.wav", audiodata);
-        break;
-    case 5:
-        Pathname = L"Tracks/left.wav";
-        ProcessSound("Tracks/left.wav", audiodata);
-        break;
-    case 6:
-        Pathname = L"Tracks/right.wav";
-        ProcessSound("Tracks/right.wav", audiodata);
-        break;
-    case 7:
-        Pathname = L"Tracks/custom.wav";
-        ProcessSound("Tracks/custom.wav", audiodata);
-        break;
-    default:
-        std::cout << "Choose a Valid Track Number \n";
-        return -1;
-        break;
+        int input;
+        wav_header audiodata;
+        LPCWSTR Pathname;
+        std::cin >> input;
+
+        switch (input)
+        {
+        case 1:
+            Pathname = L"Tracks/kini.wav";
+            ProcessSound("Tracks/kini.wav", audiodata);
+            break;
+        case 2:
+            Pathname = L"Tracks/UGO.wav";
+            ProcessSound("Tracks/UGO.wav", audiodata);
+            break;
+        case 3:
+            Pathname = L"Tracks/seno.wav";
+            ProcessSound("Tracks/seno.wav", audiodata);
+            break;
+        case 4:
+            Pathname = L"Tracks/somaruyo.wav";
+            ProcessSound("Tracks/somaruyo.wav", audiodata);
+            break;
+        case 5:
+            Pathname = L"Tracks/left.wav";
+            ProcessSound("Tracks/left.wav", audiodata);
+            break;
+        case 6:
+            Pathname = L"Tracks/right.wav";
+            ProcessSound("Tracks/right.wav", audiodata);
+            break;
+        case 7:
+            Pathname = L"Tracks/custom.wav";
+            ProcessSound("Tracks/custom.wav", audiodata);
+            break;
+        default:
+            std::cout << "Choose a Valid Track Number \n";
+            return -1;
+            break;
+        }
+
+
+
+
+
+
+        /*ProcessSound("Tracks/riff.wav", audiodata);
+        LPCWSTR Pathname = L"Tracks/riff.wav";*/
+
+
+        std::thread Dibujo(DrawCall, audiodata, Pathname);
+        //std::thread Playback(PlayMusic, Pathname);
+        //Draw(audiodata);
+
+
+
+
+        //Playback.hardware_concurrency();
+        Dibujo.hardware_concurrency();
+
+        //Playback.join();
+        Dibujo.join();
+
     }
     
-
-    
-    
-
-    
-    /*ProcessSound("Tracks/riff.wav", audiodata);
-    LPCWSTR Pathname = L"Tracks/riff.wav";*/
-    
-    
-    std::thread Dibujo(DrawCall, audiodata);
-    std::thread Playback(PlayMusic, Pathname);
-    //Draw(audiodata);
-    
-    
-    
-    
-    Playback.hardware_concurrency();
-    Dibujo.hardware_concurrency();
-    
-    Playback.join();
-    Dibujo.join();
     
 
 
