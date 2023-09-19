@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <windows.h>
+#include <winnt.h>
 #include <mmsystem.h>
 #include <fstream>
 #include <string>
@@ -95,6 +96,9 @@ public:
 
         FILE* audioin;
         fopen_s(&audioin, pathaudioFile.c_str(), "rb");
+        if (audioin == NULL) {
+            perror("Error opening file");
+		}
 
         fread(ChunkID, 4, 1, audioin);
         fread(&ChunkSize, 4, 1, audioin);
@@ -524,11 +528,14 @@ int main()
         std::cout << "5.  Stereo Test: LEFT\n";
         std::cout << "6.  Stereo Test: RIGHT\n";
         std::cout << "7.  Custom Track, MUST BE a WAV file, named 'custom' in the 'Tracks' folder\n";
+        std::cout << "8.  Enter File Path, from the root of this executable.\n";
 
         int input;
+        std::string custompath;
         wav_header audiodata;
         LPCWSTR Pathname;
         std::cin >> input;
+        wstring temp;
 
         switch (input)
         {
@@ -559,6 +566,14 @@ int main()
         case 7:
             Pathname = L"Tracks/custom.wav";
             ProcessSound("Tracks/custom.wav", audiodata);
+            break;
+        case 8:
+            std::cin >> custompath;
+
+            temp = wstring(custompath.begin(), custompath.end());
+            Pathname = temp.c_str();
+            ProcessSound(custompath, audiodata);
+            std::cout << custompath << std::endl;
             break;
         default:
             std::cout << "Choose a Valid Track Number \n";
