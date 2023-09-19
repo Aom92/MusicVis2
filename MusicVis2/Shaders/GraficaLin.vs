@@ -14,5 +14,15 @@ void main(void) {
   float Y = (coord2d.y) * 0.000025;
 
   gl_Position = vec4( ( ( X + offset_x) * scale_x), ( Y + offset_y ) * scale_y, 0, 1);
-  f_color = vec4(coord2d.xy / 2.0 + 0.5, 1, 1);
+  if ( coord2d.y > 8000 ) {
+	f_color = vec4( coord2d.y / Y + 0.5, Y, Y,1);
+  }
+  else if (coord2d.y > 1200 && coord2d.y < 1800) {
+	f_color = vec4( 0.5 , Y, coord2d.y / Y, 1.0);
+  }
+  else {
+	f_color = vec4(coord2d.xy / Y, Y, Y);
+  }
+
+  
 }

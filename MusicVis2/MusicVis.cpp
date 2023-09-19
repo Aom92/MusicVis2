@@ -57,6 +57,8 @@ int SCREEN_WIDTH, SCREEN_HEIGHT;
 Camera camera(glm::vec3(0.0f, 5.0f, 40.0));
 GLfloat lastX = WIDTH / 2.0;
 GLfloat lastY = HEIGHT / 2.0;
+GLfloat ZoomX, ZoomY = 1.0f;
+
 bool keys[1024];
 bool firstMouse = true;
 
@@ -211,7 +213,7 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
     glfwSetKeyCallback(window, KeyCallback);
     glfwSetCursorPosCallback(window, MouseCallback);
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
 	if (glewInit() != GLEW_OK)
 		std::cout << "GLEW ERROR " << std::endl;
@@ -225,6 +227,7 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
     //Getting Shaders.
     Shader Anim2("Shaders/anim.vs", "Shaders/anim.frag");
     Shader GraficaLin("Shaders/GraficaLin.vs", "Shaders/GraficaLin.frag");
+    Shader GraficaPol("Shaders/GraficaPol.vs", "Shaders/GraficaPol.frag");
     Model Piso((char*)"Models/Sea/Sea.obj");
 	
 
@@ -273,22 +276,36 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
 
     point graph[2000];
 
+    for (int i = 0; i < 2000; i++) {
+        float x = (i - 1000.0) / 100.0;
+        graph[i].x = x;
+        graph[i].y = sin(x * 10.0) ;
+    }
+
     //CALL AUDIO THREAD TO AVOID DELAY DUE TO GRAPHICS INITIALIZATION
     std::jthread Playback(PlayMusic, Pathname);
     Playback.hardware_concurrency();
     
+    float lastTime = glfwGetTime();
 
 		while (!glfwWindowShouldClose(window))
 		{
 
-			float currentTime = clock() / (float)CLOCKS_PER_SEC ;
+			float currentTime = glfwGetTime();
 			elapsed = (clock() / (double)CLOCKS_PER_SEC) - initialTime;
 
             float deltaT = currentTime - elapsed;
             
             int count = 10;
-            
 
+            if (currentTime - lastTime < 0.0166667) {
+                // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
+                glfwPollEvents();
+                continue;
+            }
+            lastTime = currentTime;
+
+           
             //FFT Calculation each frame :S
             float positionsL[] = { 
                           //AudioFile.audiodata[0 + samplecount],
@@ -351,17 +368,18 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
 			};
 
             for (int i = 0; i < 2000; i++) {
-                if (1 + samplecount >= AudioFile.SampleCount)
-                    break;
-                float x = (i - 1000.0) / 100.0;
-                graph[i].x = x;
-                graph[i].y = AudioFile.audiodata[i + samplecount]; //sin(x * 10.0) / (1.0 + x * x);
+
+                if (1 + samplecount < AudioFile.SampleCount) {
+                    float x = (i - 1000.0) / 100.0;
+                    graph[i].x = x;
+                    graph[i].y = AudioFile.audiodata[i + samplecount]; //sin(x * 10.0) / (1.0 + x * x);
+                }
                // graph[i].y = sample_data[i].real();
+                
             }
 
             
-            // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
-            glfwPollEvents();
+           
             
             //DoMovement();
 
@@ -427,6 +445,8 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
             GraficaLin.Use();
             GLuint vbo;
 
+
+
             glGenBuffers(1, &vbo);
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, sizeof graph, graph, GL_STATIC_DRAW);
@@ -444,8 +464,8 @@ void Draw(wav_header&  AudioFile, LPCWSTR Pathname) {
 
             glUniform1f(glGetUniformLocation(GraficaLin.Program, "offset_x"), 0.0);
             glUniform1f(glGetUniformLocation(GraficaLin.Program, "offset_y"), 0.0);
-            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_x"),  1.0);
-            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_y"),  0.8);
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_x"), ZoomX);
+            glUniform1f(glGetUniformLocation(GraficaLin.Program, "scale_y"), ZoomY);
             glDrawArrays(GL_LINE_STRIP, 0, 2000);
 
             glDisableVertexAttribArray(0);
@@ -628,6 +648,27 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
             keys[key] = false;
         }
     }
+
+    if (keys[GLFW_KEY_G]) {
+
+        ZoomX += 0.01;
+    }
+
+    if (keys[GLFW_KEY_H]) {
+
+        ZoomX -= 0.01;
+    }
+
+    if (keys[GLFW_KEY_B]) {
+
+        ZoomY += 0.01;
+    }
+
+    if (keys[GLFW_KEY_N]) {
+
+        ZoomY -= 0.01;
+    }
+
 
     
 }
